@@ -7,7 +7,6 @@ from .config import DEFAULT_BACKEND_OPTIONS, Config
 from .roles import Role, load_roles
 
 HARNESSES = ("claude-code", "codex", "generic")
-CLAUDE_TOOLS = {"read": ["Read", "Grep", "Glob"], "write": ["Edit", "Write"], "shell": ["Bash"]}
 
 
 class InstallError(Exception):
@@ -119,7 +118,7 @@ def _harness_files(harness: str, repo_root: Path, locations: Locations, config: 
 
 
 def _claude_agent(role: Role, model: str) -> str:
-    tools = ", ".join(tool for capability in role.capabilities for tool in CLAUDE_TOOLS[capability])
+    tools = ", ".join(role.tools)
     return (
         "---\n"
         f"name: orchestra-{role.name}\n"

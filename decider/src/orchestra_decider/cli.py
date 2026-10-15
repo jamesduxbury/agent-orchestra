@@ -276,7 +276,8 @@ def _role_run(args: argparse.Namespace) -> int:
         raise ConfigError(f"harness {args.harness!r} has no command, it dispatches roles natively")
     model = harness.strong if (args.tier or role.tier) == "strong" else harness.fast
     sandbox = "workspace-write" if "write" in role.capabilities else "read-only"
-    command = [part.replace("{model}", model).replace("{sandbox}", sandbox) for part in harness.command]
+    placeholders = {"{model}": model, "{sandbox}": sandbox, "{tools}": ",".join(role.tools)}
+    command = [_fill(part, placeholders) for part in harness.command]
     if args.dry_run:
         _print_json({"command": command, "cwd": str(args.repo)})
         return 0
@@ -284,6 +285,12 @@ def _role_run(args: argparse.Namespace) -> int:
     completed = subprocess.run(command, input=prompt, text=True, cwd=args.repo, stdout=subprocess.PIPE)
     sys.stdout.write(completed.stdout)
     return completed.returncode
+
+
+def _fill(template: str, placeholders: dict[str, str]) -> str:
+    for placeholder, value in placeholders.items():
+        template = template.replace(placeholder, value)
+    return template
 
 
 def _role(args: argparse.Namespace, config: Config):

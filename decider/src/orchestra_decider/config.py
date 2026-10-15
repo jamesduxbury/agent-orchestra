@@ -42,7 +42,8 @@ class ConfigError(Exception):
 class Harness:
     strong: str
     fast: str
-    # Argument template for `orchestra role run`. Placeholders: {model}, {sandbox}. The prompt arrives on stdin.
+    # Argument template for `orchestra role run`. Placeholders: {model}, {sandbox} (read-only or
+    # workspace-write) and {tools} (comma-separated Claude Code tool names). The prompt arrives on stdin.
     command: tuple[str, ...] = ()
 
 
@@ -53,7 +54,12 @@ DEFAULT_HARNESSES = {
         fast="gpt-6-luna",
         command=("codex", "exec", "-m", "{model}", "-s", "{sandbox}", "--skip-git-repo-check", "-"),
     ),
-    "generic": Harness(strong="opus", fast="sonnet", command=("claude", "-p", "--model", "{model}")),
+    # --tools limits the session to the role's tools, and --allowedTools pre-approves them for non-interactive use.
+    "generic": Harness(
+        strong="opus",
+        fast="sonnet",
+        command=("claude", "-p", "--model", "{model}", "--tools", "{tools}", "--allowedTools", "{tools}"),
+    ),
 }
 
 

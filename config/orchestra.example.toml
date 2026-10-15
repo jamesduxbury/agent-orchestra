@@ -25,6 +25,7 @@ sensitive_paths = ["**/auth/**", "**/security/**", "**/*secret*", "**/*token*", 
 test_paths = ["**/tests/**", "**/test_*.py", "**/*Test.java", "**/*.test.*", "**/*.spec.*"]
 
 # Models per tier, and the command `orchestra role run` uses. The prompt arrives on stdin.
+# Placeholders: {model}, {sandbox} (read-only or workspace-write), {tools} (Claude Code tool names).
 [harnesses.claude-code]
 strong = "opus"
 fast = "sonnet"
@@ -37,4 +38,4 @@ command = ["codex", "exec", "-m", "{model}", "-s", "{sandbox}", "--skip-git-repo
 [harnesses.generic]
 strong = "opus"
 fast = "sonnet"
-command = ["claude", "-p", "--model", "{model}"]
+command = ["claude", "-p", "--model", "{model}", "--tools", "{tools}", "--allowedTools", "{tools}"]

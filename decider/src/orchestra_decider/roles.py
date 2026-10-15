@@ -5,6 +5,7 @@ import yaml
 
 TIERS = ("strong", "fast")
 CAPABILITIES = ("read", "write", "shell")
+CLAUDE_TOOLS = {"read": ("Read", "Grep", "Glob"), "write": ("Edit", "Write"), "shell": ("Bash",)}
 
 
 class RoleError(Exception):
@@ -18,6 +19,11 @@ class Role:
     tier: str
     capabilities: tuple[str, ...]
     body: str
+
+    @property
+    def tools(self) -> tuple[str, ...]:
+        """Claude Code tool names granted by the role's capabilities."""
+        return tuple(tool for capability in self.capabilities for tool in CLAUDE_TOOLS[capability])
 
     def prompt(self, brief: str) -> str:
         return f"{self.body.rstrip()}\n\n## Brief\n\n{brief.strip()}\n"

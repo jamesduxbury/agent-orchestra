@@ -151,3 +151,15 @@ def test_rubric_show_unknown_decision_exits_two(workspace, capsys):
 
     assert code == 2
     assert "nope" in err
+
+
+def test_role_run_fills_tools_from_capabilities(workspace, capsys):
+    (workspace / "orchestra.toml").write_text(
+        '[decider]\nroles_dir = "roles"\n\n[harnesses.fake]\nstrong = "a"\nfast = "b"\n'
+        f'command = {json.dumps([*ECHO, "{tools}"])}\n'
+    )
+
+    _, out, _ = cli(capsys, workspace, "role", "run", "implementer", "--brief-file", str(workspace / "brief.md"), "--harness", "fake")
+    assert json.loads(out)["argv"] == ["Read,Grep,Glob,Edit,Write,Bash"]
+    _, out, _ = cli(capsys, workspace, "role", "run", "reviewer-generalist", "--brief-file", str(workspace / "brief.md"), "--harness", "fake")
+    assert json.loads(out)["argv"] == ["Read,Grep,Glob,Bash"]

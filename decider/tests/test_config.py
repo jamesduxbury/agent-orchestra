@@ -134,3 +134,9 @@ def test_roles_dir_is_relative_to_the_config_file(tmp_path: Path):
     path.write_text('[decider]\nroles_dir = "roles"\n')
 
     assert load_config(path).roles_dir == tmp_path / "roles"
+
+
+def test_generic_harness_limits_and_preapproves_role_tools(tmp_path: Path):
+    command = load_config(tmp_path / "absent.toml").harnesses["generic"].command
+
+    assert command == ("claude", "-p", "--model", "{model}", "--tools", "{tools}", "--allowedTools", "{tools}")
