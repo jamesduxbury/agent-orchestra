@@ -9,6 +9,7 @@ from pathlib import Path
 from .backends import create_backend
 from .config import DEFAULT_BACKEND_OPTIONS, Config, ConfigError, default_config_path, load_config
 from .decide import abstained, decide
+from .install import HARNESSES, InstallError, Locations, install
 from .log import TASK_RESULTS, DecisionLog, LogError, default_state_dir
 from .replay import ReplayError, cases_from_golden, cases_from_log, evaluate
 from .roles import RoleError, load_roles
@@ -18,7 +19,7 @@ from .signals import SignalsError, collect_diff_signals, with_signals
 # Editable installs only. Installed copies set `rubrics_dir` and `roles_dir` in their config.
 BUNDLED_CORE = Path(__file__).resolve().parents[3] / "core"
 
-USER_ERRORS = (ConfigError, LogError, ReplayError, RoleError, RubricError, SignalsError, OSError)
+USER_ERRORS = (ConfigError, InstallError, LogError, ReplayError, RoleError, RubricError, SignalsError, OSError)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -113,6 +114,13 @@ def _parser() -> argparse.ArgumentParser:
     role_run.add_argument("--roles-dir", type=Path)
     role_run.add_argument("--dry-run", action="store_true", help="print the command instead of running it")
     role_run.set_defaults(handler=_role_run)
+
+    install_cmd = command("install", _install, "install the skill, roles and config for a harness")
+    install_cmd.add_argument("--harness", required=True, choices=HARNESSES)
+    install_cmd.add_argument("--target", type=Path, help="skills directory, required for the generic harness")
+    install_cmd.add_argument("--home", type=Path, default=Path.home())
+    install_cmd.add_argument("--force", action="store_true", help="overwrite files edited since the last install")
+    install_cmd.add_argument("--dry-run", action="store_true")
     return parser
 
 
@@ -266,6 +274,22 @@ def _role(args: argparse.Namespace, config: Config):
 
 def _roles_dir(args: argparse.Namespace, config: Config) -> Path:
     return args.roles_dir or config.roles_dir or BUNDLED_CORE / "roles"
+
+
+def _install(args: argparse.Namespace) -> int:
+    home = args.home
+    data_home = os.environ.get("XDG_DATA_HOME") if home == Path.home() else None
+    locations = Locations(
+        home=home,
+        share_dir=Path(os.environ.get("ORCHESTRA_SHARE_DIR") or Path(data_home or home / ".local" / "share") / "orchestra"),
+        config_path=args.config or Path(os.environ.get("ORCHESTRA_CONFIG") or home / ".config" / "orchestra" / "orchestra.toml"),
+        codex_home=Path(os.environ.get("CODEX_HOME") or home / ".codex"),
+        target=args.target,
+    )
+    config = load_config(locations.config_path)
+    report = install(args.harness, BUNDLED_CORE.parent, locations, config, force=args.force, dry_run=args.dry_run)
+    _print_json(report.to_json())
+    return 0
 
 
 def _prune_opportunistically(config_path: Path | None) -> None:
