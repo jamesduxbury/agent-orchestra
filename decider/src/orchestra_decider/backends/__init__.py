@@ -1,9 +1,11 @@
 from ..config import ConfigError
 from .base import DecisionBackend
 from .static import StaticBackend
+from .systemone_http import SystemOneBackend
 
 BACKENDS: dict[str, type] = {
     "static": StaticBackend,
+    "systemone": SystemOneBackend,
 }
 
 
