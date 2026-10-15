@@ -1,0 +1,39 @@
+- decision: scope
+  expected: scope
+  state: |
+    Task: Make the dashboard faster.
+    Acceptance criteria: none given.
+- decision: scope
+  expected: scope
+  state: |
+    Task: Improve how we handle user permissions, it's a bit of a mess at the moment.
+    Acceptance criteria: none given.
+- decision: scope
+  expected: scope
+  state: |
+    Task: Add support for webhooks.
+    Acceptance criteria: none given. It is not stated which events trigger webhooks, how they are configured or how failures are retried.
+- decision: scope
+  expected: ready
+  state: |
+    Task: Fix the typo "recieve" in the README installation section.
+    Acceptance criteria: README says "receive".
+- decision: scope
+  expected: ready
+  state: |
+    Task: Add a `--json` flag to the `scan list` CLI command so it prints the scan list as a JSON array.
+    Acceptance criteria:
+    - `scan list --json` prints a JSON array of objects with id, name and status.
+    - Without the flag, output is unchanged.
+- decision: scope
+  expected: ready
+  state: |
+    Task: Return HTTP 404 instead of 500 from GET /api/projects/{id} when the project does not exist.
+    Acceptance criteria:
+    - Unknown id returns 404 with body {"error": "project not found"}.
+    - Existing ids behave as before.
+- decision: scope
+  expected: ready
+  state: |
+    Task: Bump the Jackson dependency from 2.17.1 to 2.17.2 to pick up the CVE fix.
+    Acceptance criteria: build passes with the new version.

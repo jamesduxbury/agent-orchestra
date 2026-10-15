@@ -1,0 +1,13 @@
+decision: scope
+kind: choice
+instructions: >-
+  Before any code is written, is this task specified well enough to start,
+  or does it first need requirement scoping?
+threshold: 0.25
+options:
+  scope: >-
+    Needs scoping first. The goal, acceptance criteria or boundaries are missing
+    or vague, or the request could reasonably be read several different ways.
+  ready: >-
+    Ready to start. The expected behaviour is concrete enough to write a test or
+    make the change without guessing what the requester wants.

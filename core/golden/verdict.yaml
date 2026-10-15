@@ -1,0 +1,51 @@
+- decision: verdict
+  expected: accept
+  state: |
+    Iteration 1 review findings:
+    - generalist: no blocking findings. Suggestion: rename `tmp` to `parsed_rows`.
+    Tests: all passing.
+- decision: verdict
+  expected: accept
+  state: |
+    Iteration 2 review findings:
+    - generalist: previous blocking findings resolved. No new findings.
+    - security: no findings.
+    Tests: all passing.
+- decision: verdict
+  expected: revise
+  state: |
+    Iteration 1 review findings:
+    - generalist: BLOCKING src/export.py:42 off-by-one drops the last row of every export.
+    - tests: BLOCKING no test covers an empty export.
+    Tests: all passing.
+- decision: verdict
+  expected: revise
+  state: |
+    Iteration 1 review findings:
+    - security: BLOCKING src/api/projects.py:88 builds SQL with string formatting from the `sort` query parameter. Use a whitelist of columns.
+    Tests: all passing.
+- decision: verdict
+  expected: escalate
+  state: |
+    Iteration 3 review findings:
+    - generalist: BLOCKING the race between the retry worker and the dead letter mover is still present. Same finding as iterations 1 and 2, and each fix moved the race elsewhere.
+    Tests: 2 failing intermittently.
+- decision: verdict
+  expected: escalate
+  state: |
+    Iteration 3 review findings:
+    - generalist: BLOCKING tests still fail with the same NullPointerException in TokenRefresher as the previous two iterations.
+    Tests: 4 failing.
+- decision: verdict
+  expected: ask-human
+  state: |
+    Iteration 1 review findings:
+    - security: BLOCKING storing refresh tokens in localStorage exposes them to XSS. Requirements explicitly ask for localStorage so tokens survive across tabs.
+    Tests: all passing.
+- decision: verdict
+  expected: ask-human
+  state: |
+    Iteration 1 review findings:
+    - quality: BLOCKING the planner should own retry policy.
+    - performance: BLOCKING retry policy must live in the executor to avoid a round trip per job. The two reviewers disagree on where retry policy belongs.
+    Tests: all passing.

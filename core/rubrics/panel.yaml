@@ -1,0 +1,20 @@
+decision: panel
+kind: panel
+instructions: >-
+  A generalist reviewer always reviews this change. Does it also need a
+  specialist {option} reviewer, who checks {description}?
+threshold: 0.1
+select: 0.8
+baseline: generalist
+options:
+  quality: >-
+    design, structure and maintainability, needed for large refactors or
+    restructuring rather than small additions
+  security: >-
+    authentication, authorisation, secrets, input validation, injection and
+    exposure of sensitive data
+  tests: >-
+    missing or weak tests, needed when behaviour changed but tests were not
+    touched or edge cases look untested
+  performance: >-
+    algorithmic complexity, database queries, caching, memory use and hot paths

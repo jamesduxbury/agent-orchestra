@@ -1,0 +1,19 @@
+decision: verdict
+kind: choice
+instructions: >-
+  Given the review findings for this iteration, what should happen next?
+threshold: 0.25
+options:
+  accept: >-
+    No blocking findings remain. Anything left is a nitpick or an optional
+    suggestion, so the work is done.
+  revise: >-
+    There are blocking findings the implementer can fix directly, such as bugs,
+    missing tests or clear quality problems.
+  escalate: >-
+    The implementer is going in circles, repeating the same mistakes across
+    iterations, or the fix needs deeper design work, so a stronger model should
+    take over.
+  ask-human: >-
+    The findings conflict with the requirements, need a product or architecture
+    decision, or the reviewers disagree in a way only the requester can settle.

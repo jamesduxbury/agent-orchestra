@@ -1,0 +1,16 @@
+decision: tier
+kind: choice
+instructions: >-
+  Which workflow weight fits this coding task? Risky changes need the heaviest
+  workflow even when they are small.
+threshold: 0.25
+options:
+  direct: >-
+    Trivial edit with no behaviour to test, such as a typo, comment, docs,
+    formatting, rename, config value or version bump.
+  single: >-
+    Small, low-risk behaviour change in one or two files with an obvious
+    implementation.
+  tdd: >-
+    Substantial or risky change, such as a new feature, several components,
+    security, data migrations, concurrency or a public API.

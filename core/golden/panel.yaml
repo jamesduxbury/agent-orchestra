@@ -1,0 +1,40 @@
+- decision: panel
+  expected: [generalist]
+  state: |
+    Task: Add a `--json` flag to the `scan list` CLI command.
+    Diff signals (against main):
+    - 2 files changed, +48 -3 lines
+    - Tests touched: yes
+    - Sensitive paths: none
+- decision: panel
+  expected: [generalist, security]
+  state: |
+    Task: Replace session cookie login with an OAuth2 PKCE flow.
+    Diff signals (against main):
+    - 9 files changed, +612 -140 lines
+    - Tests touched: yes
+    - Sensitive paths: src/auth/oauth.py, src/auth/token_store.py, src/auth/middleware.py
+- decision: panel
+  expected: [generalist, performance]
+  state: |
+    Task: Replace the N+1 queries on the project list page with a single joined query and add caching of the result for 60 seconds.
+    Diff signals (against main):
+    - 3 files changed, +95 -40 lines
+    - Tests touched: yes
+    - Sensitive paths: none
+- decision: panel
+  expected: [generalist, tests]
+  state: |
+    Task: Fix the date parsing bug in the report exporter where timestamps near midnight UTC land on the wrong day.
+    Diff signals (against main):
+    - 1 files changed, +12 -4 lines
+    - Tests touched: no
+    - Sensitive paths: none
+- decision: panel
+  expected: [generalist, quality]
+  state: |
+    Task: Restructure the scan scheduler into separate planner, queue and executor classes, replacing the 1,400-line SchedulerService.
+    Diff signals (against main):
+    - 14 files changed, +1320 -1405 lines
+    - Tests touched: yes
+    - Sensitive paths: none

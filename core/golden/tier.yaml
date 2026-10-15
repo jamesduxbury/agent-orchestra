@@ -1,0 +1,41 @@
+- decision: tier
+  expected: direct
+  state: |
+    Task: Fix the typo "recieve" in the README installation section.
+- decision: tier
+  expected: direct
+  state: |
+    Task: Change the default log level in config/logging.yaml from DEBUG to INFO.
+- decision: tier
+  expected: direct
+  state: |
+    Task: Bump the Jackson dependency from 2.17.1 to 2.17.2 in build.gradle.
+- decision: tier
+  expected: single
+  state: |
+    Task: Add a `--json` flag to the `scan list` CLI command so it prints the scan list as a JSON array.
+    Acceptance criteria: `scan list --json` prints id, name and status per scan. Default output unchanged.
+- decision: tier
+  expected: single
+  state: |
+    Task: Return HTTP 404 instead of 500 from GET /api/projects/{id} when the project does not exist.
+    Acceptance criteria: unknown id returns 404 with {"error": "project not found"}.
+- decision: tier
+  expected: single
+  state: |
+    Task: Trim leading and trailing whitespace from the project name before saving it in the create project form handler.
+- decision: tier
+  expected: tdd
+  state: |
+    Task: Replace session cookie login with an OAuth2 PKCE flow in the web dashboard.
+    Touches the auth middleware, token storage and the login controller.
+    Acceptance criteria: users log in via the identity provider, tokens refresh silently, logout revokes the refresh token.
+- decision: tier
+  expected: tdd
+  state: |
+    Task: Add retry with exponential backoff and a dead letter queue to the webhook delivery worker.
+    Acceptance criteria: failed deliveries retry 5 times with backoff, then move to the dead letter queue. Delivery is never duplicated.
+- decision: tier
+  expected: tdd
+  state: |
+    Task: Add a database migration that splits the `users.name` column into `first_name` and `last_name`, backfills existing rows and updates every query that reads the name.
