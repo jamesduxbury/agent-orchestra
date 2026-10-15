@@ -39,6 +39,25 @@ class ConfigError(Exception):
 
 
 @dataclass(frozen=True)
+class Harness:
+    strong: str
+    fast: str
+    # Argument template for `orchestra role run`. Placeholders: {model}, {sandbox}. The prompt arrives on stdin.
+    command: tuple[str, ...] = ()
+
+
+DEFAULT_HARNESSES = {
+    "claude-code": Harness(strong="opus", fast="sonnet"),
+    "codex": Harness(
+        strong="gpt-6.1-sol",
+        fast="gpt-6-luna",
+        command=("codex", "exec", "-m", "{model}", "-s", "{sandbox}", "--skip-git-repo-check", "-"),
+    ),
+    "generic": Harness(strong="opus", fast="sonnet", command=("claude", "-p", "--model", "{model}")),
+}
+
+
+@dataclass(frozen=True)
 class Config:
     backend: str = DEFAULT_BACKEND
     backend_options: dict = field(default_factory=lambda: dict(DEFAULT_BACKEND_OPTIONS[DEFAULT_BACKEND]))
@@ -46,6 +65,8 @@ class Config:
     sensitive_paths: tuple[str, ...] = DEFAULT_SENSITIVE_PATHS
     test_paths: tuple[str, ...] = DEFAULT_TEST_PATHS
     log_dir: Path | None = None
+    roles_dir: Path | None = None
+    harnesses: dict[str, Harness] = field(default_factory=lambda: dict(DEFAULT_HARNESSES))
     retention_days: int = 30
     stale_days: int = 60
 
@@ -78,7 +99,22 @@ def load_config(path: Path | None) -> Config:
         log_dir=_relative_to(path, log.get("dir")),
         retention_days=_days(log, "retention_days", 30, path),
         stale_days=_days(log, "stale_days", 60, path),
+        roles_dir=_relative_to(path, decider.get("roles_dir")),
+        harnesses=_harnesses(data.get("harnesses", {}), path),
     )
+
+
+def _harnesses(section: dict, path: Path) -> dict[str, Harness]:
+    harnesses = dict(DEFAULT_HARNESSES)
+    for name, settings in section.items():
+        base = DEFAULT_HARNESSES.get(name)
+        strong = settings.get("strong", base.strong if base else None)
+        fast = settings.get("fast", base.fast if base else None)
+        if not strong or not fast:
+            raise ConfigError(f"{path}: [harnesses.{name}] needs 'strong' and 'fast' models")
+        command = settings.get("command", base.command if base else ())
+        harnesses[name] = Harness(strong=strong, fast=fast, command=tuple(command))
+    return harnesses
 
 
 def _relative_to(config_path: Path, value: str | None) -> Path | None:

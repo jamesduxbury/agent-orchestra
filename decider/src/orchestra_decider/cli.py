@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,13 +11,14 @@ from .config import DEFAULT_BACKEND_OPTIONS, Config, ConfigError, default_config
 from .decide import abstained, decide
 from .log import TASK_RESULTS, DecisionLog, LogError, default_state_dir
 from .replay import ReplayError, cases_from_golden, cases_from_log, evaluate
-from .rubrics import RubricError, load_rubrics
+from .roles import RoleError, load_roles
+from .rubrics import RubricError, load_rubric, load_rubrics
 from .signals import SignalsError, collect_diff_signals, with_signals
 
-# Editable installs only. Installed copies set `rubrics_dir` in their config.
+# Editable installs only. Installed copies set `rubrics_dir` and `roles_dir` in their config.
 BUNDLED_CORE = Path(__file__).resolve().parents[3] / "core"
 
-USER_ERRORS = (ConfigError, LogError, ReplayError, RubricError, SignalsError, OSError)
+USER_ERRORS = (ConfigError, LogError, ReplayError, RoleError, RubricError, SignalsError, OSError)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -84,6 +86,33 @@ def _parser() -> argparse.ArgumentParser:
     replay_cmd.add_argument("--rubrics-dir", type=Path)
     replay_cmd.add_argument("--backend", help="backend to evaluate, defaults to the configured one")
     replay_cmd.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="backend option override")
+
+    rubric_cmd = commands.add_parser("rubric", help="show the rubric behind a decision")
+    rubric_actions = rubric_cmd.add_subparsers(dest="action", required=True)
+    rubric_show = rubric_actions.add_parser("show", parents=[common])
+    rubric_show.add_argument("decision")
+    rubric_show.add_argument("--rubrics-dir", type=Path)
+    rubric_show.set_defaults(handler=_rubric_show)
+
+    role_cmd = commands.add_parser("role", help="list, show or dispatch agent roles")
+    role_actions = role_cmd.add_subparsers(dest="action", required=True)
+    role_list = role_actions.add_parser("list", parents=[common])
+    role_list.add_argument("--roles-dir", type=Path)
+    role_list.set_defaults(handler=_role_list)
+    role_show = role_actions.add_parser("show", parents=[common])
+    role_show.add_argument("role")
+    role_show.add_argument("--brief-file", help="brief to append, or - for stdin")
+    role_show.add_argument("--roles-dir", type=Path)
+    role_show.set_defaults(handler=_role_show)
+    role_run = role_actions.add_parser("run", parents=[common], help="run a role through a harness command")
+    role_run.add_argument("role")
+    role_run.add_argument("--brief-file", required=True, help="brief to append, or - for stdin")
+    role_run.add_argument("--harness", default="generic")
+    role_run.add_argument("--tier", choices=("strong", "fast"), help="override the role's tier, e.g. to escalate")
+    role_run.add_argument("--repo", type=Path, default=Path("."), help="working directory for the agent")
+    role_run.add_argument("--roles-dir", type=Path)
+    role_run.add_argument("--dry-run", action="store_true", help="print the command instead of running it")
+    role_run.set_defaults(handler=_role_run)
     return parser
 
 
@@ -185,6 +214,58 @@ def _replay(args: argparse.Namespace) -> int:
         cases = cases_from_log(_log(config))
     _print_json(evaluate(cases, backend).to_json())
     return 0
+
+
+def _rubric_show(args: argparse.Namespace) -> int:
+    directory = _rubrics_dir(args, _config(args))
+    for path in sorted([*directory.glob("*.yaml"), *directory.glob("*.yml")]):
+        if load_rubric(path).decision == args.decision:
+            sys.stdout.write(path.read_text())
+            return 0
+    raise RubricError(f"unknown decision {args.decision!r}")
+
+
+def _role_list(args: argparse.Namespace) -> int:
+    roles = load_roles(_roles_dir(args, _config(args)))
+    _print_json([{"name": r.name, "tier": r.tier, "description": r.description} for r in roles.values()])
+    return 0
+
+
+def _role_show(args: argparse.Namespace) -> int:
+    role = _role(args, _config(args))
+    sys.stdout.write(role.prompt(_read_state(args.brief_file)) if args.brief_file else role.body)
+    return 0
+
+
+def _role_run(args: argparse.Namespace) -> int:
+    config = _config(args)
+    role = _role(args, config)
+    harness = config.harnesses.get(args.harness)
+    if harness is None:
+        raise ConfigError(f"unknown harness {args.harness!r}, configured: {', '.join(sorted(config.harnesses))}")
+    if not harness.command:
+        raise ConfigError(f"harness {args.harness!r} has no command, it dispatches roles natively")
+    model = harness.strong if (args.tier or role.tier) == "strong" else harness.fast
+    sandbox = "workspace-write" if "write" in role.capabilities else "read-only"
+    command = [part.replace("{model}", model).replace("{sandbox}", sandbox) for part in harness.command]
+    if args.dry_run:
+        _print_json({"command": command, "cwd": str(args.repo)})
+        return 0
+    prompt = role.prompt(_read_state(args.brief_file))
+    completed = subprocess.run(command, input=prompt, text=True, cwd=args.repo, stdout=subprocess.PIPE)
+    sys.stdout.write(completed.stdout)
+    return completed.returncode
+
+
+def _role(args: argparse.Namespace, config: Config):
+    roles = load_roles(_roles_dir(args, config))
+    if args.role not in roles:
+        raise RoleError(f"unknown role {args.role!r}, available: {', '.join(roles)}")
+    return roles[args.role]
+
+
+def _roles_dir(args: argparse.Namespace, config: Config) -> Path:
+    return args.roles_dir or config.roles_dir or BUNDLED_CORE / "roles"
 
 
 def _prune_opportunistically(config_path: Path | None) -> None:

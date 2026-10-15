@@ -77,3 +77,18 @@ def test_option_descriptions_stay_short_enough_for_small_decision_models(rubrics
     for rubric in rubrics.values():
         for option, description in rubric.options.items():
             assert len(description.split()) <= 30, f"{rubric.decision}.{option}"
+
+
+def test_skill_references_every_role_and_decision(rubrics, roles):
+    skill = SKILL.read_text()
+
+    for name in [*rubrics, *roles]:
+        assert name in skill, name
+
+
+@pytest.mark.parametrize("harness", ["claude-code", "codex", "generic"])
+def test_every_harness_explains_dispatch_and_escalation(harness):
+    dispatch = (CORE.parent / "harnesses" / harness / "dispatch.md").read_text()
+
+    assert "Escalate" in dispatch
+    assert "parallel" in dispatch

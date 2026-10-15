@@ -108,3 +108,29 @@ def test_invalid_retention_is_a_config_error(tmp_path: Path, section: str):
 
     with pytest.raises(ConfigError):
         load_config(path)
+
+
+def test_default_harness_models_and_commands(tmp_path: Path):
+    harnesses = load_config(tmp_path / "absent.toml").harnesses
+
+    assert (harnesses["claude-code"].strong, harnesses["claude-code"].fast) == ("opus", "sonnet")
+    assert (harnesses["codex"].strong, harnesses["codex"].fast) == ("gpt-6.1-sol", "gpt-6-luna")
+    assert harnesses["codex"].command[:2] == ("codex", "exec")
+    assert harnesses["generic"].command[0] == "claude"
+
+
+def test_harness_settings_merge_over_defaults(tmp_path: Path):
+    path = tmp_path / "orchestra.toml"
+    path.write_text('[harnesses.codex]\nfast = "gpt-reserve"\n\n[harnesses.custom]\nstrong = "big"\nfast = "small"\ncommand = ["run", "{model}"]\n')
+
+    harnesses = load_config(path).harnesses
+
+    assert (harnesses["codex"].strong, harnesses["codex"].fast) == ("gpt-6.1-sol", "gpt-reserve")
+    assert harnesses["custom"].command == ("run", "{model}")
+
+
+def test_roles_dir_is_relative_to_the_config_file(tmp_path: Path):
+    path = tmp_path / "orchestra.toml"
+    path.write_text('[decider]\nroles_dir = "roles"\n')
+
+    assert load_config(path).roles_dir == tmp_path / "roles"
