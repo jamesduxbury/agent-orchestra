@@ -236,3 +236,45 @@ def test_cli_install_prints_the_report(tmp_path, capsys, monkeypatch):
     assert code == 0
     assert report["harness"] == "codex"
     assert str(tmp_path / "home" / ".codex" / "skills" / "orchestrate" / "SKILL.md") in report["written"]
+
+
+def test_generic_installs_to_different_targets_coexist(repo, locations, tmp_path):
+    run("generic", repo, locations)
+    other = Locations(**{**locations.__dict__, "target": tmp_path / "other-skills"})
+
+    report = run("generic", repo, other)
+
+    assert report.removed == []
+    assert (locations.target / "orchestrate" / "SKILL.md").exists()
+    assert (other.target / "orchestrate" / "SKILL.md").exists()
+
+
+def test_installs_into_different_homes_sharing_assets_coexist(repo, locations, tmp_path):
+    run("claude-code", repo, locations)
+    second_home = Locations(**{**locations.__dict__, "home": tmp_path / "second-home"})
+
+    run("claude-code", repo, second_home)
+
+    assert (locations.home / ".claude" / "agents" / "orchestra-implementer.md").exists()
+
+
+def test_relative_locations_are_resolved(repo, locations, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    relative = Locations(**{**locations.__dict__, "target": Path("rel-skills")})
+
+    report = run("generic", repo, relative)
+
+    assert str(tmp_path.resolve() / "rel-skills" / "orchestrate" / "SKILL.md") in report.written
+
+
+def test_adopts_a_legacy_per_harness_manifest(repo, locations):
+    run("claude-code", repo, locations)
+    manifests = locations.share_dir / "manifests"
+    (current,) = manifests.glob("claude-code-*.json")
+    current.rename(manifests / "claude-code.json")
+    skill_source = repo / "core" / "skills" / "orchestrate" / "SKILL.md"
+    skill_source.write_text(skill_source.read_text() + "\nNew guidance.\n")
+
+    report = run("claude-code", repo, locations)
+
+    assert str(locations.home.resolve() / ".claude" / "skills" / "orchestrate" / "SKILL.md") in report.written

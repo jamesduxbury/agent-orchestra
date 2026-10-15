@@ -55,18 +55,33 @@ def install(
     if not core.is_dir():
         raise InstallError(f"no core/ directory under {repo_root}. Install the CLI from a checkout with `uv tool install --editable`")
 
+    locations = _resolved(locations)
     report = InstallReport(harness)
-    # Shared assets and harness files keep separate manifests, so one harness never removes another's files.
-    _sync(_shared_files(core, locations), locations.share_dir / "manifests" / "shared.json", report, force, dry_run)
-    _sync(
-        _harness_files(harness, repo_root, locations, config),
-        locations.share_dir / "manifests" / f"{harness}.json",
-        report,
-        force,
-        dry_run,
-    )
+    root, files = _harness_files(harness, repo_root, locations, config)
+    manifests = locations.share_dir / "manifests"
+    # One manifest per install location, so installing elsewhere never removes another install's files.
+    harness_manifest = manifests / f"{harness}-{hashlib.sha256(str(root).encode()).hexdigest()[:12]}.json"
+    _adopt_legacy_manifest(manifests / f"{harness}.json", harness_manifest, root, dry_run)
+
+    _sync(_shared_files(core, locations), manifests / "shared.json", report, force, dry_run)
+    _sync(files, harness_manifest, report, force, dry_run)
     _write_config_once(locations, report, dry_run)
     return report
+
+
+def _resolved(locations: Locations) -> Locations:
+    def resolve(path: Path | None) -> Path | None:
+        return path.expanduser().resolve() if path is not None else None
+
+    return Locations(**{name: resolve(value) for name, value in locations.__dict__.items()})
+
+
+def _adopt_legacy_manifest(legacy: Path, manifest: Path, root: Path, dry_run: bool) -> None:
+    """Early installs kept one manifest per harness. Carry over the entries under this install's root."""
+    if dry_run or manifest.exists() or not legacy.exists():
+        return
+    entries = {path: digest for path, digest in _read_manifest(legacy).items() if Path(path).is_relative_to(root)}
+    manifest.write_text(json.dumps(entries, indent=2, sort_keys=True) + "\n")
 
 
 def _shared_files(core: Path, locations: Locations) -> dict[Path, str]:
@@ -77,26 +92,30 @@ def _shared_files(core: Path, locations: Locations) -> dict[Path, str]:
     return files
 
 
-def _harness_files(harness: str, repo_root: Path, locations: Locations, config: Config) -> dict[Path, str]:
+def _harness_files(harness: str, repo_root: Path, locations: Locations, config: Config) -> tuple[Path, dict[Path, str]]:
+    """The directory this harness install owns, and the files to write under it."""
     skill = (repo_root / "core" / "skills" / "orchestrate" / "SKILL.md").read_text()
     dispatch = (repo_root / "harnesses" / harness / "dispatch.md").read_text()
 
     if harness == "claude-code":
-        skill_dir = locations.home / ".claude" / "skills" / "orchestrate"
+        root = locations.home / ".claude"
+        skill_dir = root / "skills" / "orchestrate"
         models = config.harnesses["claude-code"]
-        agents_dir = locations.home / ".claude" / "agents"
+        agents_dir = root / "agents"
         agents = {
             agents_dir / f"orchestra-{role.name}.md": _claude_agent(role, models.strong if role.tier == "strong" else models.fast)
             for role in load_roles(repo_root / "core" / "roles").values()
         }
     elif harness == "codex":
-        skill_dir, agents = locations.codex_home / "skills" / "orchestrate", {}
+        root = locations.codex_home
+        skill_dir, agents = root / "skills" / "orchestrate", {}
     else:
         if locations.target is None:
             raise InstallError("the generic harness needs --target, the directory your harness loads skills from")
-        skill_dir, agents = locations.target / "orchestrate", {}
+        root = locations.target
+        skill_dir, agents = root / "orchestrate", {}
 
-    return {skill_dir / "SKILL.md": skill, skill_dir / "dispatch.md": dispatch, **agents}
+    return root, {skill_dir / "SKILL.md": skill, skill_dir / "dispatch.md": dispatch, **agents}
 
 
 def _claude_agent(role: Role, model: str) -> str:
