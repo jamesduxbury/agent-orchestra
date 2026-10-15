@@ -140,3 +140,20 @@ def test_generic_harness_limits_and_preapproves_role_tools(tmp_path: Path):
     command = load_config(tmp_path / "absent.toml").harnesses["generic"].command
 
     assert command == ("claude", "-p", "--model", "{model}", "--tools", "{tools}", "--allowedTools", "{tools}")
+
+
+@pytest.mark.parametrize(
+    "toml",
+    [
+        pytest.param('[signals]\nsensitive_paths = "**/auth/**"\n', id="string instead of list"),
+        pytest.param('[harnesses.codex]\ncommand = "codex exec"\n', id="string command"),
+        pytest.param('[harnesses]\ncodex = "fast"\n', id="harness not a table"),
+        pytest.param("[signals]\ntest_paths = [1, 2]\n", id="non-string entries"),
+    ],
+)
+def test_malformed_lists_are_config_errors(tmp_path: Path, toml: str):
+    path = tmp_path / "orchestra.toml"
+    path.write_text(toml)
+
+    with pytest.raises(ConfigError):
+        load_config(path)

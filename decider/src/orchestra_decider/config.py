@@ -100,8 +100,8 @@ def load_config(path: Path | None) -> Config:
         backend=backend,
         backend_options=options,
         rubrics_dir=_relative_to(path, decider.get("rubrics_dir")),
-        sensitive_paths=tuple(signals.get("sensitive_paths", DEFAULT_SENSITIVE_PATHS)),
-        test_paths=tuple(signals.get("test_paths", DEFAULT_TEST_PATHS)),
+        sensitive_paths=_strings(signals.get("sensitive_paths", DEFAULT_SENSITIVE_PATHS), "[signals] sensitive_paths", path),
+        test_paths=_strings(signals.get("test_paths", DEFAULT_TEST_PATHS), "[signals] test_paths", path),
         log_dir=_relative_to(path, log.get("dir")),
         retention_days=_days(log, "retention_days", 30, path),
         stale_days=_days(log, "stale_days", 60, path),
@@ -113,14 +113,22 @@ def load_config(path: Path | None) -> Config:
 def _harnesses(section: dict, path: Path) -> dict[str, Harness]:
     harnesses = dict(DEFAULT_HARNESSES)
     for name, settings in section.items():
+        if not isinstance(settings, dict):
+            raise ConfigError(f"{path}: [harnesses.{name}] must be a table")
         base = DEFAULT_HARNESSES.get(name)
         strong = settings.get("strong", base.strong if base else None)
         fast = settings.get("fast", base.fast if base else None)
         if not strong or not fast:
             raise ConfigError(f"{path}: [harnesses.{name}] needs 'strong' and 'fast' models")
         command = settings.get("command", base.command if base else ())
-        harnesses[name] = Harness(strong=strong, fast=fast, command=tuple(command))
+        harnesses[name] = Harness(strong=strong, fast=fast, command=_strings(command, f"[harnesses.{name}] command", path))
     return harnesses
+
+
+def _strings(value: object, where: str, path: Path) -> tuple[str, ...]:
+    if not isinstance(value, list | tuple) or not all(isinstance(item, str) for item in value):
+        raise ConfigError(f"{path}: {where} must be a list of strings")
+    return tuple(value)
 
 
 def _relative_to(config_path: Path, value: str | None) -> Path | None:
