@@ -47,9 +47,9 @@ def summarise(base: str, changes: list[FileChange], sensitive_globs: list[str], 
     )
 
 
-def parse_numstat(numstat: str) -> list[FileChange]:
+def parse_numstat(numstat: str, separator: str = "\n") -> list[FileChange]:
     changes = []
-    for line in numstat.splitlines():
+    for line in numstat.split(separator):
         if not line.strip():
             continue
         added, removed, path = line.split("\t", 2)
@@ -63,7 +63,8 @@ def collect_diff_signals(
 ) -> DiffSignals:
     """Working tree (including untracked files) against `base`."""
     _git(repo, "rev-parse", "--verify", "--quiet", f"{base}^{{commit}}", error=f"unknown base {base!r}")
-    tracked = parse_numstat(_git(repo, "diff", "--numstat", "--no-renames", base))
+    # -z keeps non-ASCII paths verbatim instead of C-quoting them, so globs still match.
+    tracked = parse_numstat(_git(repo, "diff", "--numstat", "--no-renames", "-z", base), separator="\0")
     untracked = [
         FileChange(path, _line_count(repo / path), 0)
         for path in _git(repo, "ls-files", "--others", "--exclude-standard", "-z").split("\0")

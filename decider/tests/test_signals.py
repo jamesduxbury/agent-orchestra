@@ -148,3 +148,13 @@ def test_unknown_base_is_a_signals_error(repo: Path):
 def test_non_repository_is_a_signals_error(tmp_path: Path):
     with pytest.raises(SignalsError):
         collect_diff_signals("main", tmp_path, SENSITIVE, TESTS)
+
+
+def test_non_ascii_paths_match_globs(repo: Path):
+    (repo / "auth").mkdir()
+    (repo / "auth" / "café_token.py").write_text("x\n")
+    git(repo, "add", ".")
+
+    result = collect_diff_signals("main", repo, SENSITIVE, TESTS)
+
+    assert result.sensitive_paths == ("auth/café_token.py",)
