@@ -84,3 +84,27 @@ def test_signal_globs_can_be_overridden(tmp_path: Path):
 
     assert config.sensitive_paths == ("**/billing/**",)
     assert config.test_paths == ("**/spec/**",)
+
+
+def test_log_retention_defaults(tmp_path: Path):
+    config = load_config(tmp_path / "absent.toml")
+
+    assert (config.log_dir, config.retention_days, config.stale_days) == (None, 30, 60)
+
+
+def test_log_section_overrides_retention_and_directory(tmp_path: Path):
+    path = tmp_path / "orchestra.toml"
+    path.write_text('[log]\ndir = "state"\nretention_days = 7\nstale_days = 14\n')
+
+    config = load_config(path)
+
+    assert (config.log_dir, config.retention_days, config.stale_days) == (tmp_path / "state", 7, 14)
+
+
+@pytest.mark.parametrize("section", ["retention_days = -1", 'stale_days = "soon"'])
+def test_invalid_retention_is_a_config_error(tmp_path: Path, section: str):
+    path = tmp_path / "orchestra.toml"
+    path.write_text(f"[log]\n{section}\n")
+
+    with pytest.raises(ConfigError):
+        load_config(path)
