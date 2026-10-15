@@ -22,8 +22,27 @@ BUNDLED_CORE = Path(__file__).resolve().parents[3] / "core"
 USER_ERRORS = (ConfigError, InstallError, LogError, ReplayError, RoleError, RubricError, SignalsError, OSError)
 
 
+class UsageError(Exception):
+    pass
+
+
+class _Parser(argparse.ArgumentParser):
+    def error(self, message: str):
+        raise UsageError(f"{self.prog}: {message}")
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
+    argv = sys.argv[1:] if argv is None else argv
+    try:
+        args = _parser().parse_args(argv)
+    except UsageError as error:
+        if argv and argv[0] == "decide":
+            # Even a malformed call must leave the orchestrator a JSON answer to fall back from.
+            decision = argv[1] if len(argv) > 1 and not argv[1].startswith("-") else "unknown"
+            print(json.dumps(abstained(decision, f"input_error: {error}", "unknown").to_json()))
+            return 0
+        print(error, file=sys.stderr)
+        raise SystemExit(2) from None
     if args.command != "log":
         _prune_opportunistically(args.config)
     if args.handler is _decide:
@@ -36,10 +55,10 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _parser() -> argparse.ArgumentParser:
-    common = argparse.ArgumentParser(add_help=False)
+    common = _Parser(add_help=False)
     common.add_argument("--config", type=Path, default=None, help="defaults to $ORCHESTRA_CONFIG or ~/.config/orchestra/orchestra.toml")
 
-    parser = argparse.ArgumentParser(prog="orchestra", description="Local decision model routing for agent orchestration")
+    parser = _Parser(prog="orchestra", description="Local decision model routing for agent orchestration")
     commands = parser.add_subparsers(dest="command", required=True)
 
     def command(name: str, handler, help: str) -> argparse.ArgumentParser:

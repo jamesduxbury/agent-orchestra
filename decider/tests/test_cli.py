@@ -154,3 +154,28 @@ def test_decide_with_bad_git_base_abstains_as_input_error(workspace, repo, capsy
 
     assert code == 0
     assert payload["reason"].startswith("input_error")
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(["decide", "tier"], id="missing state file"),
+        pytest.param(["decide", "tier", "--state-file", "x", "--no-such-flag"], id="unknown flag"),
+        pytest.param(["decide"], id="missing decision"),
+    ],
+)
+def test_decide_argument_errors_still_print_abstain_json(capsys, args):
+    code = main(args)
+
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert payload["status"] == "abstain"
+    assert payload["reason"].startswith("input_error")
+
+
+def test_other_commands_keep_usage_errors(capsys):
+    with pytest.raises(SystemExit) as exit_info:
+        main(["signals"])
+
+    assert exit_info.value.code == 2
+    assert "--git-diff" in capsys.readouterr().err
