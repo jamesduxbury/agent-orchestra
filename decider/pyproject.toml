@@ -1,0 +1,28 @@
+[project]
+name = "orchestra-decider"
+version = "0.1.0"
+description = "Pluggable local decision model routing for agent orchestration"
+requires-python = ">=3.13"
+dependencies = [
+    "httpx>=0.28",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+strands = ["torch>=2.5", "transformers>=4.50"]
+
+[project.scripts]
+orchestra = "orchestra_decider.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orchestra_decider"]
