@@ -95,6 +95,7 @@ def _harness_files(harness: str, repo_root: Path, locations: Locations, config: 
     """The directory this harness install owns, and the files to write under it."""
     skill = (repo_root / "core" / "skills" / "orchestrate" / "SKILL.md").read_text()
     dispatch = (repo_root / "harnesses" / harness / "dispatch.md").read_text()
+    dispatch = dispatch.replace("{{strong_model}}", config.harnesses[harness].strong)
 
     if harness == "claude-code":
         root = locations.home / ".claude"

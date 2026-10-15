@@ -1,5 +1,6 @@
 import json
 import shutil
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -83,7 +84,17 @@ def test_claude_code_gets_the_skill_with_its_dispatch_guide(repo, locations):
 
     skill = locations.home / ".claude" / "skills" / "orchestrate"
     assert (skill / "SKILL.md").read_text() == (repo / "core" / "skills" / "orchestrate" / "SKILL.md").read_text()
-    assert (skill / "dispatch.md").read_text() == (repo / "harnesses" / "claude-code" / "dispatch.md").read_text()
+    assert "{{strong_model}}" not in (skill / "dispatch.md").read_text()
+    assert 'model: "opus"' in (skill / "dispatch.md").read_text()
+
+
+def test_claude_code_escalation_uses_the_configured_strong_model(repo, locations):
+    config = load_config(None)
+    custom = Config(harnesses={**config.harnesses, "claude-code": replace(config.harnesses["claude-code"], strong="fable")})
+
+    install("claude-code", repo, locations, custom)
+
+    assert 'model: "fable"' in (locations.home / ".claude" / "skills" / "orchestrate" / "dispatch.md").read_text()
 
 
 def test_claude_code_agents_map_tier_to_model_and_capabilities_to_tools(repo, locations):
@@ -194,7 +205,7 @@ def test_force_overwrites_edited_files(repo, locations):
 
     run("claude-code", repo, locations, force=True)
 
-    assert installed.read_text() == (repo / "harnesses" / "claude-code" / "dispatch.md").read_text()
+    assert installed.read_text() != "my own notes"
 
 
 def test_removes_files_for_roles_that_no_longer_exist(repo, locations):
