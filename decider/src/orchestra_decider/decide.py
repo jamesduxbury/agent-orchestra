@@ -1,3 +1,4 @@
+import math
 import time
 import uuid
 from collections.abc import Callable
@@ -78,7 +79,7 @@ def _interpret_panel(rubric: Rubric, answers: BackendAnswers) -> tuple[list[str]
     for option in rubric.options:
         answer = _answer(answers, option, ["true", "false"])
         p_true = _normalised(answer, option)["true"]
-        probability_true[option] = answer["true"]
+        probability_true[option] = p_true
         # How far the option sits from flipping, scaled so 1 means as far from the select line as possible.
         margins.append(abs(p_true - rubric.select) / max(rubric.select, 1 - rubric.select))
 
@@ -94,8 +95,15 @@ def _answer(answers: BackendAnswers, question: str, expected: list[str]) -> dict
     answer = answers[question]
     if set(answer) != set(expected):
         raise MalformedResponse(f"answer for {question!r} has options {sorted(answer)}, expected {sorted(expected)}")
+    for option, probability in answer.items():
+        if not _is_probability(probability):
+            raise MalformedResponse(f"answer for {question!r} gives {option!r} the invalid probability {probability!r}")
     # Report the backend's probabilities in rubric order, unaltered, for logging and replay.
     return {option: answer[option] for option in expected}
+
+
+def _is_probability(value: object) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool) and math.isfinite(value) and 0 <= value <= 1
 
 
 def _confidence(distribution: dict[str, float], question: str) -> float:

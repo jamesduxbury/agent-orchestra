@@ -214,3 +214,35 @@ def test_panel_confidence_measures_distance_from_the_select_line():
     assert result.status == "decided"
     assert result.choice == ["generalist"]
     assert result.confidence == pytest.approx(0.3 / 0.8)
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        pytest.param({"direct": float("nan"), "single": 0.0, "tdd": 0.0}, id="nan"),
+        pytest.param({"direct": float("inf"), "single": 0.0, "tdd": 0.0}, id="infinite"),
+        pytest.param({"direct": 1.2, "single": -0.2, "tdd": 0.0}, id="out of range"),
+        pytest.param({"direct": "high", "single": 0.0, "tdd": 0.0}, id="not a number"),
+    ],
+)
+def test_invalid_probabilities_abstain_as_malformed(tier, answer):
+    result = decide(tier, "Rewrite auth", StaticBackend({"tier": answer}))
+
+    assert result.status == "abstain"
+    assert result.reason.startswith("malformed_response")
+
+
+def test_invalid_binary_probability_abstains_as_malformed(panel):
+    backend = StaticBackend({"security": {"true": 1.3, "false": -0.3}, "performance": {"true": 0.1, "false": 0.9}})
+
+    assert decide(panel, "x", backend).reason.startswith("malformed_response")
+
+
+def test_panel_selects_on_normalised_probabilities(panel):
+    # Normalised P(true) is 0.8, above the 0.5 select line, though the raw value is not.
+    backend = StaticBackend({"security": {"true": 0.4, "false": 0.1}, "performance": {"true": 0.01, "false": 0.99}})
+
+    result = decide(panel, "x", backend)
+
+    assert result.suggested == ["generalist", "security"]
+    assert result.distribution["security"] == pytest.approx(0.8)
