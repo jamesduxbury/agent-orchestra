@@ -14,6 +14,12 @@ TASK_ID = re.compile(r"^t_\d{8}_[0-9a-f]{8}$")
 DECISION_ID = re.compile(r"^d_[0-9a-f]{12}$")
 TASK_RESULTS = ("accepted", "abandoned")
 PRUNE_INTERVAL = timedelta(days=1)
+REQUIRED_FIELDS = {
+    "task_started": {"at"},
+    "decision": {"id", "at", "rubric", "state", "result"},
+    "outcome": {"decision_id", "chosen", "at"},
+    "finished": {"result", "at"},
+}
 
 
 class LogError(Exception):
@@ -102,7 +108,7 @@ class DecisionLog:
         return overridden
 
     def has_task(self, task_id: str) -> bool:
-        return bool(TASK_ID.match(task_id)) and self._path(task_id).exists()
+        return bool(TASK_ID.fullmatch(task_id)) and self._path(task_id).exists()
 
     def prune(self, retention_days: int, stale_days: int, dry_run: bool = False) -> list[Path]:
         if retention_days == 0 or not self.tasks_dir.exists():
@@ -152,7 +158,7 @@ class DecisionLog:
         return self.clock().isoformat()
 
     def _path(self, task_id: str) -> Path:
-        if not TASK_ID.match(task_id):
+        if not TASK_ID.fullmatch(task_id):
             raise LogError(f"malformed task id {task_id!r}")
         return self.tasks_dir / f"{task_id}.jsonl"
 
@@ -175,16 +181,27 @@ class DecisionLog:
                 record = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if isinstance(record, dict) and "type" in record:
+            if _well_formed(record):
                 yield record
 
     def _find_decision(self, decision_id: str) -> tuple[str, dict]:
-        if DECISION_ID.match(decision_id) and self.tasks_dir.exists():
+        if DECISION_ID.fullmatch(decision_id) and self.tasks_dir.exists():
             for path in self.tasks_dir.glob("*.jsonl"):
                 for record in self._records(path):
                     if record["type"] == "decision" and record["id"] == decision_id:
                         return path.stem, record
         raise LogError(f"unknown decision {decision_id}")
+
+
+def _well_formed(record: object) -> bool:
+    """Skip hand-edited or truncated records rather than failing every prune and export."""
+    if not isinstance(record, dict) or not REQUIRED_FIELDS.get(record.get("type"), {None}) <= record.keys():
+        return False
+    try:
+        datetime.fromisoformat(record["at"])
+    except (TypeError, ValueError):
+        return False
+    return True
 
 
 def _rubric_json(rubric: Rubric) -> dict:

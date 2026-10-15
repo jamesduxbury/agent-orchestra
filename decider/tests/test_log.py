@@ -373,3 +373,36 @@ def test_state_dir_defaults_to_xdg_state_home(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
 
     assert default_state_dir() == tmp_path / "orchestra"
+
+
+# Hardening
+
+
+def test_task_ids_must_match_exactly(log: DecisionLog):
+    task = log.start_task()
+
+    assert not log.has_task(task + "\n")
+    with pytest.raises(LogError):
+        log.finish_task(task + "\n", "accepted")
+
+
+def append_raw(log: DecisionLog, task: str, record: dict) -> None:
+    with (log.root / "tasks" / f"{task}.jsonl").open("a") as file:
+        file.write(json.dumps(record) + "\n")
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        pytest.param({"type": "decision"}, id="decision without fields"),
+        pytest.param({"type": "finished", "result": "accepted", "at": "yesterday"}, id="bad timestamp"),
+        pytest.param({"type": "outcome", "chosen": "tdd"}, id="outcome without decision"),
+    ],
+)
+def test_malformed_records_are_skipped(log: DecisionLog, clock: Clock, record: dict):
+    task = log.start_task()
+    logged_decision(log, task)
+    append_raw(log, task, record)
+
+    assert len(list(log.export())) == 1
+    assert log.prune(retention_days=30, stale_days=60) == []

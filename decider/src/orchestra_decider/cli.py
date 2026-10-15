@@ -224,7 +224,8 @@ def _log_export(args: argparse.Namespace) -> int:
     lines = "".join(json.dumps(row.to_json()) + "\n" for row in rows)
     if args.output:
         # The dataset holds task descriptions, so keep it as private as the log.
-        descriptor = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        descriptor = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+        os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "w") as file:
             file.write(lines)
     else:

@@ -239,3 +239,13 @@ def test_abstain_before_deciding_reports_no_task(workspace, capsys):
 
     assert payload["reason"].startswith("input_error")
     assert payload["task"] is None
+
+
+def test_log_export_makes_an_existing_output_file_private(workspace, capsys, tmp_path):
+    output = tmp_path / "dataset.jsonl"
+    output.write_text("old")
+    output.chmod(0o644)
+
+    cli(capsys, workspace, "log", "export", "--output", str(output))
+
+    assert output.stat().st_mode & 0o777 == 0o600
