@@ -184,6 +184,8 @@ def _record_quietly(log: DecisionLog, rubric, state: str, result) -> None:
     try:
         log.record_decision(result.task, rubric, state, result)
     except (LogError, OSError) as error:
+        # A null task tells the orchestrator there is no logged decision to record an outcome against.
+        result.task = None
         print(f"orchestra decide: decision not logged: {error}", file=sys.stderr)
 
 

@@ -220,3 +220,22 @@ def test_replay_from_the_log_with_another_backend(workspace, capsys):
     )
 
     assert (payload["total"], payload["agreed"]) == (1, 1)
+
+
+def test_decision_that_could_not_be_logged_reports_no_task(workspace, capsys, state_dir):
+    task = start_task(capsys, workspace)
+    (state_dir / "tasks" / f"{task}.jsonl").chmod(0o400)
+
+    payload = decide_in(capsys, workspace, task)
+
+    assert payload["status"] == "abstain"
+    assert payload["task"] is None
+
+
+def test_abstain_before_deciding_reports_no_task(workspace, capsys):
+    task = start_task(capsys, workspace)
+
+    payload = cli_json(capsys, workspace, "decide", "tier", "--state-file", "/no/such/state.md", "--task", task)
+
+    assert payload["reason"].startswith("input_error")
+    assert payload["task"] is None

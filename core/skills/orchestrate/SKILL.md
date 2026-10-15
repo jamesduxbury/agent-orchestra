@@ -29,7 +29,7 @@ orchestra decide <decision> --task "$TASK" --state-file "$STATE" [--git-diff "$B
 It always prints one line of JSON and exits 0.
 
 - `"status": "decided"` means follow `choice`.
-- `"status": "abstain"` means the model was unsure or unavailable (see `reason`). Run `orchestra rubric show <decision>`, make the call yourself against that rubric (treat `suggested` as a weak hint), then record it with `orchestra outcome <id> --chosen <option>`. For `panel`, pass comma-separated reviewers, for example `--chosen generalist,security`.
+- `"status": "abstain"` means the model was unsure or unavailable (see `reason`). Run `orchestra rubric show <decision>`, make the call yourself against that rubric (treat `suggested` as a weak hint), then record it with `orchestra outcome <id> --chosen <option>`. Skip the outcome when the JSON has `"task": null`, which means the decision was not logged (for example a bad argument or an unreadable state file). For `panel`, pass comma-separated reviewers, for example `--chosen generalist,security`.
 - You may override a `decided` choice when you know something the model could not. For example, the human asked for TDD, or the diff touches auth but `security` was not selected. Record every override with `orchestra outcome`. Overrides are the training signal for improving the model, so never skip them.
 - Explicit instructions from the human always beat the model.
 
