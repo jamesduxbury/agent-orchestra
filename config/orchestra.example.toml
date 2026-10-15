@@ -1,0 +1,40 @@
+# ~/.config/orchestra/orchestra.toml
+# Relative paths resolve against this file's directory.
+
+[decider]
+backend = "systemone"
+rubrics_dir = "~/.local/share/orchestra/rubrics"
+roles_dir = "~/.local/share/orchestra/roles"
+
+[backends.systemone]
+url = "http://localhost:11434"
+model = "strands-decider:2b"
+timeout = 10
+keep_alive = "30m"
+
+# Offline or test backend with fixed answers. Unconfigured questions get a uniform distribution.
+[backends.static]
+error = "decision model disabled"
+
+[log]
+retention_days = 30
+stale_days = 60
+
+[signals]
+sensitive_paths = ["**/auth/**", "**/security/**", "**/*secret*", "**/*token*", "**/migrations/**", "**/*.tf"]
+test_paths = ["**/tests/**", "**/test_*.py", "**/*Test.java", "**/*.test.*", "**/*.spec.*"]
+
+# Models per tier, and the command `orchestra role run` uses. The prompt arrives on stdin.
+[harnesses.claude-code]
+strong = "opus"
+fast = "sonnet"
+
+[harnesses.codex]
+strong = "gpt-6.1-sol"
+fast = "gpt-6-luna"
+command = ["codex", "exec", "-m", "{model}", "-s", "{sandbox}", "--skip-git-repo-check", "-"]
+
+[harnesses.generic]
+strong = "opus"
+fast = "sonnet"
+command = ["claude", "-p", "--model", "{model}"]
