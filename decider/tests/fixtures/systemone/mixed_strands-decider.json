@@ -1,0 +1,95 @@
+{
+  "request": {
+    "state": "Task: Add OAuth2 PKCE login flow to the web dashboard, replacing the existing session cookie login. Touches auth middleware, token storage and the login controller. No acceptance criteria written yet.\nDiff signals: none (not started).",
+    "questions": {
+      "scope": {
+        "type": "noul",
+        "instructions": "Is this task under-specified, so it needs requirement scoping before any code is written?",
+        "criteria": {
+          "true": "Missing acceptance criteria or ambiguous scope",
+          "false": "Clear enough to start"
+        }
+      },
+      "tier": {
+        "type": "choice",
+        "instructions": "Which workflow weight fits this task?",
+        "criteria": {
+          "direct": "Trivial change, one file, no new behaviour",
+          "single": "Small, well-understood behaviour change, implement then one review",
+          "tdd": "Complex or risky behaviour, strong model writes failing tests first, fast model implements"
+        }
+      },
+      "panel_security": {
+        "type": "noul",
+        "instructions": "Should a security-focused reviewer review this change?"
+      },
+      "panel_performance": {
+        "type": "noul",
+        "instructions": "Should a performance-focused reviewer review this change?"
+      },
+      "risk": {
+        "type": "score",
+        "instructions": "How risky is this change?",
+        "criteria": [
+          "negligible",
+          "low",
+          "moderate",
+          "high",
+          "critical"
+        ]
+      }
+    },
+    "model": "strands-decider:2b"
+  },
+  "response": {
+    "model": "strands-decider:2b",
+    "answers": {
+      "scope": {
+        "type": "noul",
+        "noul": 0.5756070803326769
+      },
+      "tier": {
+        "type": "choice",
+        "choice": "single",
+        "probabilities": {
+          "direct": 0.11799398033824803,
+          "single": 0.6535943049431799,
+          "tdd": 0.22841171471857202
+        },
+        "confidence": 0.2104634779034773
+      },
+      "panel_security": {
+        "type": "noul",
+        "noul": 0.644718707627975
+      },
+      "panel_performance": {
+        "type": "noul",
+        "noul": 0.21737535152910512
+      },
+      "risk": {
+        "type": "score",
+        "score": 2.2651328468385974,
+        "legend": {
+          "0": "negligible",
+          "1": "low",
+          "2": "moderate",
+          "3": "high",
+          "4": "critical"
+        },
+        "probabilities": {
+          "0": 0.11086879290519022,
+          "1": 0.1710943815121972,
+          "2": 0.24936117142380512,
+          "3": 0.27938649415644023,
+          "4": 0.18928916000236728
+        },
+        "confidence": 0.0284957167004668
+      }
+    },
+    "usage": {
+      "input_tokens": 664,
+      "output_tokens": 0
+    },
+    "prompt_eval_cached_count": 199
+  }
+}
