@@ -217,6 +217,8 @@ def _expired(path: Path, records: list[dict], now: datetime, retention_days: int
     finished = next((r for r in records if r["type"] == "finished"), None)
     if finished:
         return now - datetime.fromisoformat(finished["at"]) > timedelta(days=retention_days)
+    if stale_days == 0:
+        return False
     timestamps = [datetime.fromisoformat(r["at"]) for r in records if "at" in r]
     last_write = max(timestamps) if timestamps else datetime.fromtimestamp(path.stat().st_mtime, UTC)
     return now - last_write > timedelta(days=stale_days)

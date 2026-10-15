@@ -257,6 +257,15 @@ def test_zero_retention_disables_purging(log: DecisionLog, clock: Clock):
     assert len(task_files(log)) == 2
 
 
+def test_zero_stale_days_keeps_unfinished_tasks(log: DecisionLog, clock: Clock):
+    unfinished = log.start_task()
+    finished_task(log, clock)
+    clock.advance(days=365)
+
+    assert log.prune(retention_days=30, stale_days=0) != []
+    assert task_files(log) == [unfinished]
+
+
 def test_dry_run_reports_without_deleting(log: DecisionLog, clock: Clock):
     finished_task(log, clock)
     clock.advance(days=31)

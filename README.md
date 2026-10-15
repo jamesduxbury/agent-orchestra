@@ -80,7 +80,7 @@ Pass `--task` and each decision is logged to `~/.local/state/orchestra/tasks/<ta
 ```toml
 [log]
 retention_days = 30   # after the task finishes. 0 disables purging
-stale_days = 60       # unfinished tasks, from their last write
+stale_days = 60       # unfinished tasks, from their last write. 0 keeps them
 ```
 
 Every `orchestra` command prunes at most once a day, so no daemon is needed, and `orchestra log prune --dry-run` shows what would go. `orchestra log export` writes the retained window as a flat JSONL dataset (state, options, model choice, final choice, whether it was overridden) for evaluation or fine-tuning.
