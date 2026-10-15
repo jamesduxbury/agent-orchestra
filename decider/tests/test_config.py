@@ -67,3 +67,20 @@ def test_invalid_toml_is_a_config_error(tmp_path: Path):
 
     with pytest.raises(ConfigError, match="orchestra.toml"):
         load_config(path)
+
+
+def test_default_signal_globs_cover_common_sensitive_and_test_paths(tmp_path: Path):
+    config = load_config(tmp_path / "absent.toml")
+
+    assert "**/auth/**" in config.sensitive_paths
+    assert "**/tests/**" in config.test_paths
+
+
+def test_signal_globs_can_be_overridden(tmp_path: Path):
+    path = tmp_path / "orchestra.toml"
+    path.write_text('[signals]\nsensitive_paths = ["**/billing/**"]\ntest_paths = ["**/spec/**"]\n')
+
+    config = load_config(path)
+
+    assert config.sensitive_paths == ("**/billing/**",)
+    assert config.test_paths == ("**/spec/**",)

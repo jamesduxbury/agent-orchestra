@@ -1,5 +1,6 @@
 import io
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -107,3 +108,49 @@ def test_backend_errors_abstain_with_exit_zero(workspace, capsys):
 
     assert code == 0
     assert payload["reason"] == "backend_error: offline"
+
+
+@pytest.fixture
+def repo(workspace: Path) -> Path:
+    repo = workspace / "repo"
+    repo.mkdir()
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"]
+    subprocess.run([*git, "init", "-q", "-b", "main"], cwd=repo, check=True)
+    (repo / "app.py").write_text("one\n")
+    subprocess.run([*git, "add", "."], cwd=repo, check=True)
+    subprocess.run([*git, "commit", "-q", "-m", "base"], cwd=repo, check=True)
+    (repo / "auth").mkdir()
+    (repo / "auth" / "token.py").write_text("secret\n")
+    return repo
+
+
+def test_signals_prints_the_diff_summary(workspace, repo, capsys):
+    code = main(["signals", "--git-diff", "main", "--repo", str(repo), "--config", str(workspace / "orchestra.toml")])
+
+    assert code == 0
+    assert capsys.readouterr().out == (
+        "Diff signals (against main):\n"
+        "- 1 files changed, +1 -0 lines\n"
+        "- Tests touched: no\n"
+        "- Sensitive paths: auth/token.py\n"
+    )
+
+
+def test_signals_reports_git_errors_with_exit_two(workspace, repo, capsys):
+    code = main(["signals", "--git-diff", "nope", "--repo", str(repo), "--config", str(workspace / "orchestra.toml")])
+
+    assert code == 2
+    assert "nope" in capsys.readouterr().err
+
+
+def test_decide_with_git_diff_still_decides(workspace, repo, capsys):
+    _, payload = run(capsys, *decide_args(workspace), "--git-diff", "main", "--repo", str(repo))
+
+    assert payload["status"] == "decided"
+
+
+def test_decide_with_bad_git_base_abstains_as_input_error(workspace, repo, capsys):
+    code, payload = run(capsys, *decide_args(workspace), "--git-diff", "nope", "--repo", str(repo))
+
+    assert code == 0
+    assert payload["reason"].startswith("input_error")
